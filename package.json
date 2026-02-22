@@ -1,0 +1,17 @@
+{
+  "name": "presto-template-starter",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "make build",
+    "test": "make test"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "marked": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/bun": "latest"
+  }
+}

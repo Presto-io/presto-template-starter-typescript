@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - target: bun-darwin-x64
+            os: macos-latest
+            artifact_suffix: darwin-amd64
+          - target: bun-darwin-arm64
+            os: macos-latest
+            artifact_suffix: darwin-arm64
+          - target: bun-linux-x64
+            os: ubuntu-latest
+            artifact_suffix: linux-amd64
+          - target: bun-linux-arm64
+            os: ubuntu-latest
+            artifact_suffix: linux-arm64
+          - target: bun-windows-x64
+            os: ubuntu-latest
+            artifact_suffix: windows-amd64.exe
+          - target: bun-windows-arm64
+            os: ubuntu-latest
+            artifact_suffix: windows-arm64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Read template name from manifest
+        id: meta
+        run: echo "name=$(jq -r .name manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        run: |
+          OUTNAME="presto-template-${{ steps.meta.outputs.name }}-${{ matrix.artifact_suffix }}"
+          bun build --compile --target=${{ matrix.target }} src/index.ts --outfile "${OUTNAME}"
+          echo "OUTNAME=${OUTNAME}" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.artifact_suffix }}
+          path: presto-template-*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          merge-multiple: true
+
+      - name: Generate SHA256SUMS
+        run: sha256sum presto-template-* > SHA256SUMS
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            presto-template-*
+            SHA256SUMS
+          generate_release_notes: true
