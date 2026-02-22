@@ -12,6 +12,11 @@ if (args.includes("--manifest")) {
   process.exit(0);
 }
 
+if (args.includes("--version")) {
+  process.stdout.write((manifest as any).version + "\n");
+  process.exit(0);
+}
+
 if (args.includes("--example")) {
   process.stdout.write(example);
   process.exit(0);

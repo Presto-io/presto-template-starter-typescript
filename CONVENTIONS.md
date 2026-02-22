@@ -44,6 +44,7 @@ my-template/
 | `./binary` | stdin 读 Markdown，stdout 输出 Typst 源码 | `cat doc.md \| ./binary > out.typ` |
 | `./binary --manifest` | stdout 输出 manifest.json 内容 | `./binary --manifest > manifest.json` |
 | `./binary --example` | stdout 输出 example.md 内容 | `./binary --example > example.md` |
+| `./binary --version` | stdout 输出版本号（从 manifest.json 的 version 字段读取），然后退出 | `./binary --version` |
 
 **关键约束：**
 
@@ -85,7 +86,7 @@ my-template/
 | `version` | 是 | semver |
 | `author` | 是 | GitHub 用户名 |
 | `license` | 是 | SPDX 标识符 |
-| `category` | 是 | 分类：government / education / business / academic / legal / resume / creative / other |
+| `category` | 是 | 模板分类标签，自由文本，最大 20 字符，只允许中文/英文/数字/空格/连字符。示例："公文"、"教育"、"简历"、"学术论文"、"商务" |
 | `keywords` | 是 | 搜索关键词，2-6 个 |
 | `minPrestoVersion` | 是 | 最低兼容 Presto 版本 |
 | `requiredFonts` | 否 | 所需字体列表 |
@@ -118,6 +119,22 @@ my-template/
 ```
 
 type 可选：`string` / `number` / `boolean` / `array`
+
+### 信任等级（trust）
+
+trust 字段**不由模板自己声明**，而是由 Presto 的 template-registry 在索引时自动判定：
+
+| Trust | 条件 | 含义 |
+| ----- | ---- | ---- |
+| `official` | 仓库 owner 是 `Presto-io` 组织 | 官方出品 |
+| `verified` | Release 的 SHA256SUMS 文件有有效的 GPG 签名（公钥在 registry 中注册） | 开发者身份已验证，二进制未被篡改 |
+| `community` | 在 registry 中，无有效签名 | 仅收录，未审核 |
+| `unrecorded` | 不在 registry 中 | 用户手动 URL 安装 |
+
+模板开发者不需要在 manifest.json 中添加 trust 字段。如果你希望你的模板获得 `verified` 标识，需要：
+1. 生成 GPG 密钥对
+2. 在 template-registry 注册你的公钥
+3. Release 时对 SHA256SUMS 文件进行 GPG 签名，生成 SHA256SUMS.sig
 
 ---
 
