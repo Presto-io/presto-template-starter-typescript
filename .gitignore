@@ -2,3 +2,6 @@ node_modules/
 bun.lock
 presto-template-*
 !src/
+
+# Claude Code
+.claude/
