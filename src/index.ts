@@ -47,9 +47,10 @@ output += "\n";
 
 // Title from frontmatter
 if (meta.title) {
-  output += `#let title = "${meta.title}"\n`;
+  const title = String(meta.title);
+  output += `#let title = "${escapeTypstString(title)}"\n`;
   output += "\n";
-  output += `#align(center, text(size: 22pt, weight: "bold")[${meta.title}])\n`;
+  output += `#align(center, text(size: 22pt, weight: "bold")[${escapeTypstContent(title)}])\n`;
   output += "#v(1em)\n";
   output += "\n";
 }
@@ -120,7 +121,7 @@ function renderTokens(tokens: Token[]): string {
       case "code": {
         const t = token as Tokens.Code;
         const content = t.text.replace(/\n$/, "");
-        result += `\`\`\`\n${content}\n\`\`\`\n\n`;
+        result += typstRawBlock(content);
         break;
       }
 
@@ -133,7 +134,7 @@ function renderTokens(tokens: Token[]): string {
 
       default:
         if ("text" in token) {
-          result += `${(token as { text: string }).text}\n\n`;
+          result += `${escapeTypstContent((token as { text: string }).text)}\n\n`;
         }
         break;
     }
@@ -150,7 +151,7 @@ function renderListItem(item: Tokens.ListItem): string {
     } else if (t.type === "paragraph" && "tokens" in t && t.tokens) {
       content += renderInline((t as Tokens.Paragraph).tokens);
     } else if ("text" in t) {
-      content += (t as { text: string }).text;
+      content += escapeTypstContent((t as { text: string }).text);
     }
   }
   return content;
@@ -163,7 +164,7 @@ function renderInline(tokens: Token[] | undefined): string {
   for (const token of tokens) {
     switch (token.type) {
       case "text":
-        result += (token as Tokens.Text).text;
+        result += escapeTypstContent((token as Tokens.Text).text);
         break;
 
       case "strong": {
@@ -180,7 +181,7 @@ function renderInline(tokens: Token[] | undefined): string {
 
       case "codespan": {
         const t = token as Tokens.Codespan;
-        result += `#raw("${t.text}")`;
+        result += `#raw("${escapeTypstString(t.text)}")`;
         break;
       }
 
@@ -190,11 +191,38 @@ function renderInline(tokens: Token[] | undefined): string {
 
       default:
         if ("text" in token) {
-          result += (token as { text: string }).text;
+          result += escapeTypstContent((token as { text: string }).text);
         }
         break;
     }
   }
 
   return result;
+}
+
+function escapeTypstString(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/#/g, "\\#");
+}
+
+function escapeTypstContent(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/]/g, "\\]").replace(/#/g, "\\#");
+}
+
+function typstRawBlock(content: string): string {
+  const fence = "`".repeat(Math.max(3, maxBacktickRun(content) + 1));
+  return `${fence}\n${content}\n${fence}\n\n`;
+}
+
+function maxBacktickRun(text: string): number {
+  let max = 0;
+  let current = 0;
+  for (const char of text) {
+    if (char === "`") {
+      current++;
+      max = Math.max(max, current);
+    } else {
+      current = 0;
+    }
+  }
+  return max;
 }
