@@ -3,6 +3,8 @@ import example from "../example.md" with { type: "text" };
 import { marked, type Token, type Tokens } from "marked";
 import yaml from "js-yaml";
 
+const MAX_INPUT_BYTES = 10 * 1024 * 1024;
+
 // --- CLI flags ---
 
 const args = process.argv.slice(2);
@@ -24,7 +26,13 @@ if (args.includes("--example")) {
 
 // --- Default mode: stdin Markdown → stdout Typst ---
 
-const input = await Bun.stdin.text();
+let input: string;
+try {
+  input = await readStdinLimited();
+} catch (error) {
+  console.error(`error reading stdin: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
 const { frontmatter, body } = splitFrontmatter(input);
 
 interface FrontmatterData {
@@ -62,6 +70,29 @@ output += renderTokens(tokens);
 process.stdout.write(output);
 
 // --- Helper functions ---
+
+async function readStdinLimited(): Promise<string> {
+  const reader = Bun.stdin.stream().getReader();
+  const decoder = new TextDecoder();
+  let total = 0;
+  let result = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_INPUT_BYTES) {
+        throw new Error(`input exceeds ${MAX_INPUT_BYTES} bytes`);
+      }
+      result += decoder.decode(value, { stream: true });
+    }
+    result += decoder.decode();
+    return result;
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 function splitFrontmatter(text: string): {
   frontmatter: string | null;
