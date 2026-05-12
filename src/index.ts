@@ -45,6 +45,11 @@ if (frontmatter) {
   meta = (yaml.load(frontmatter) as FrontmatterData) ?? {};
 }
 
+if (args.includes("--info")) {
+  process.stdout.write(JSON.stringify(outputInfo(meta)));
+  process.exit(0);
+}
+
 let output = "";
 
 // Page setup
@@ -70,6 +75,25 @@ output += renderTokens(tokens);
 process.stdout.write(output);
 
 // --- Helper functions ---
+
+function outputInfo(meta: FrontmatterData) {
+  const title = String(meta.title ?? "").trim() || "output";
+  return {
+    schemaVersion: 1,
+    outputBaseName: cleanFilenameBase(title),
+    previewTitle: title,
+    document: {
+      title,
+      keywords: ["模板"],
+      language: "zh-CN",
+    },
+  };
+}
+
+function cleanFilenameBase(value: string): string {
+  const cleaned = value.trim().replace(/[\/\\:*?"<>|]/g, "_");
+  return cleaned || "output";
+}
 
 async function readStdinLimited(): Promise<string> {
   const reader = Bun.stdin.stream().getReader();
