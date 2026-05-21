@@ -1,6 +1,8 @@
 node_modules/
 bun.lock
 presto-template-*
+.bun-build
+*.bun-build
 !src/
 
 # Claude Code

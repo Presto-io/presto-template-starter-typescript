@@ -2,6 +2,7 @@ import manifest from "../manifest.json";
 import example from "../example.md" with { type: "text" };
 import { marked, type Token, type Tokens } from "marked";
 import yaml from "js-yaml";
+import { ensureNonBlankTypst } from "./output.js";
 
 const MAX_INPUT_BYTES = 10 * 1024 * 1024;
 
@@ -42,7 +43,12 @@ interface FrontmatterData {
 
 let meta: FrontmatterData = {};
 if (frontmatter) {
-  meta = (yaml.load(frontmatter) as FrontmatterData) ?? {};
+  try {
+    meta = (yaml.load(frontmatter) as FrontmatterData) ?? {};
+  } catch (error) {
+    console.error(`error parsing frontmatter: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  }
 }
 
 if (args.includes("--info")) {
@@ -72,6 +78,12 @@ if (meta.title) {
 const tokens = marked.lexer(body);
 output += renderTokens(tokens);
 
+try {
+  ensureNonBlankTypst(output);
+} catch (error) {
+  console.error(`error converting template: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
 process.stdout.write(output);
 
 // --- Helper functions ---
